@@ -1,0 +1,891 @@
+ssh centos@12.234.25.25
+
+spark2-shell
+
+Declaration:
+
+Immutable
+
+val i = 0
+
+val i = "Hello"
+
+Mutable
+
+var i = 0
+
+i = 2
+
+Paste Mode
+
+:paste
+
+Invoking functions
+
+Println("Hello World")
+
+-- The below are both same
+
+val i = 1 +2 
+
+val i = 1.+(2)
+
+
+val i = (1 to 100)
+
+for (i <- (1 to 100)) {
+println(i)
+}
+
+
+-- Total of odd and even numbers using if loop
+
+var totalEven = 0
+var totalOdd = 0
+for (element <- (1 to 100)) {
+if (element % 2 == 0) totalEven += element else totalOdd += element
+}
+
+
+-- Total of odd and even numbers using while loop
+
+var lb = 1
+val ub = 100
+var totalEven = 0
+var totalOdd = 0
+while(lb <= ub) {
+ if(lb %2 == 0) totalEven += lb else totalOdd += lb
+ lb+= 1
+}
+
+
+-- functions
+-- Datatype of function inputs is mandatory
+
+-- sum of numbers between a range of numbers
+
+def sum(lb: Int, ub: Int) = {
+ var total = 0
+ for(element <- lb to ub) {
+     total += element
+ }
+ total
+}
+
+--Sum of Squares
+
+def sumOfSquares(lb: Int, ub: Int) = {
+ var total = 0
+ for(element <- lb to ub) {
+     total += element * element
+ }
+ total
+}
+
+
+-- passing functions to functions
+
+def sum(func: Int => Int, lb:Int, ub: Int) = {
+ var total = 0
+   for(element <- lb to ub) {
+      total += func(element)
+ }
+  total
+ }
+
+
+-- Git clone
+
+git clone https://github.com/dgadiraju/data
+
+-- hdfs dfs -chown -R root /ashwin
+
+du -sh /home/centos/data/*
+hdfs dfs -mkdir -p ashwin/data
+
+
+hdfs dfs -put ashwin/data/* /home/centos/data
+
+hdfs dfs -ls -h ashwin/data/*
+
+
+
+--Spark
+
+spark2-shell --master yarn \
+  --conf spark.ui.port=12654 
+  --num-executors 1 
+  --executor-memory 512M
+
+sc.getConf.getAll.foreach(println)
+
+
+-- intialising sparkcontext prgramatically
+
+sc.stop
+
+import org.apache.spark.{SparkConf,SparkContext}
+
+val conf = new SparkConf().setAppName("Daily Revenue").setMaster("yarn-client")
+
+val sc = new SparkContext(conf)
+
+sc.getConf.getAll.foreach(println)
+
+
+
+--RDD - Resilient Distributed Dataset
+
+--creating RDD - validating files from FS
+
+hdfs dfs -ls ashwin/data/retail_db/orders
+hdfs dfs fs -tail ashwin/data/retail_db/orders/part-00000
+
+-- create RDD using spark2-shell
+
+val orders = sc.textFile("ashwin/data/retail_db/orders")
+
+orders.take(10).foreach(println)
+
+
+val orders = sc.textFile("ashwin/data/retail_db/orders")
+
+val ordersMap = orders.map(order => {
+      val o = order.split(",")
+      (o(0).toInt, order)
+      })
+
+val orderItems = sc.textFile("ashwin/data/retail_db/order_items")
+
+
+val orderItemsMap = orderItems.map(orderItem => {
+      val oi = orderItem.split(",")
+      (oi(1).toInt, orderItem)
+       })
+
+ordersMap.take(10).foreach(println)
+
+orderItemsMap.take(10).foreach(println)
+
+
+val ordersJoin = ordersMap.join(orderItemsMap)
+
+ordersJoin.take(10).foreach(println)
+
+
+val ordersLeftOuterJoin = ordersMap.leftOuterJoin(orderItemsMap)
+
+ordersLeftOuterJoin.take(10).foreach(println)
+
+val ordersLeftOuterJoinFilter = ordersLeftOuterJoin.filter(order => order._2._2 == None)
+
+ordersLeftOuterJoinFilter.first
+
+val ordersWithoutOrderItems = ordersLeftOuterJoinFilter.map(order => order._2._1)
+
+ordersWithoutOrderItems.take(10).foreach(println)
+
+
+val ordersRightOuterJoin = orderItemsMap.rightOuterJoin(ordersMap)
+
+ordersRightOuterJoin.take(10).foreach(println)
+
+val ordersRightOuterJoinFilter = ordersRightOuterJoin.filter(order => order._2._1 == None)
+
+ordersRightOuterJoinFilter.take(10).foreach(println)
+
+val ordersWithoutOrderItems = ordersRightOuterJoinFilter.map(order => order._2._2)
+
+ordersWithoutOrderItems.first
+
+
+//Aggregations
+
+
+val orders = sc.textFile("ashwin/data/retail_db/orders")
+
+
+val orderItems = sc.textFile("ashwin/data/retail_db/order_items")
+
+
+val ordersMap = orders.map(order => {
+      val o = order.split(",")
+      (o(0).toInt, order)
+      })
+
+ordersMap.take(10).foreach(println)
+
+val orderItemsMap = orderItems.map(orderItem => {
+      val oi = orderItem.split(",")
+      (oi(1).toInt, orderItem)
+       })
+
+orderItemsMap.take(10).foreach(println)
+
+
+orderStatusCount = orders.map(order => (order.split(",")(3),"")).countByKey.foreach(println)
+
+
+val ordersRevenue = orderItems.map(o => o.split(",")(4).toFloat)
+
+ordersRevenue.take(10).foreach(println)
+
+ordersRevenue.reduce((total,revenue) => total + revenue)
+
+ordersRevenue.reduce((max,revenue) => {
+if(max > revenue) max else revenue
+})
+
+ordersRevenue.reduce((min,revenue) => {
+if(min < revenue) min else revenue
+})
+
+
+//Aggregations - groupByKey
+
+//Get revenue per order_id
+//Get data in descending order by order_item sub_total for each
+
+val orderItems = sc.textFile("ashwin/data/retail_db/order_items")
+
+val orderItemsMap = orderItems.map(orderItem => {
+val oi = orderItem.split(",")
+(oi(1).toInt, oi(4).toFloat)
+})
+
+
+val orderItemsGBK = orderItemsMap.groupByKey
+
+orderItemsGBK.take(10).foreach(println)
+
+val ordersSortedByRevenue = orderItemsGBK.flatMap(rec => rec._2.toList.sortBy(o => -o).map(k => (rec._1, k)))
+
+ordersSortedByRevenue.take(10).foreach(println)
+
+
+//Aggregations - reduceByKey
+
+val orderItems = sc.textFile("ashwin/data/retail_db/order_items")
+
+val orderItemsMap = orderItems.map(orderItem => {
+val oi = orderItem.split(",")
+(oi(1).toInt, oi(4).toFloat)
+})
+
+orderItems.take(10).foreach(println)
+
+orderItemsMap.take(10).foreach(println)
+
+val revenuePerOrderId = orderItemsMap.
+   reduceByKey((total, revenue) => total + revenue)
+
+val minRevenuePerOrderId = orderItemsMap.
+   reduceByKey((min, revenue) => if(min > revenue) revenue else min)
+
+orderItemsMap.sortByKey().take(10).foreach(println)
+
+minRevenuePerOrderId.sortByKey().take(10).foreach(println)
+
+
+\\Aggregations - aggregateByKey
+
+val orderItems = sc.textFile("ashwin/data/retail_db/order_items")
+
+val orderItemsMap = orderItems.map(orderItem => {
+val oi = orderItem.split(",")
+(oi(1).toInt, oi(4).toFloat)
+})
+
+orderItems.take(10).foreach(println)
+
+orderItemsMap.take(10).foreach(println)
+
+-- (order_id, order_id_total)
+
+val revenueAndMaxPerProductId = orderItemsMap.
+aggregateByKey((0.0f, 0.0f))(
+  (inter, subTotal) => (inter._1 + subTotal, if(subTotal > inter._2) subTotal else inter._2),
+  (total, inter) => (total._1+inter._1, if(total._2 > inter._2) total._2 else inter._2)
+ )
+
+--(order_id, (total_order_revenue, max_order_item_Total))
+
+
+
+val revenueAndMinPerProductId = orderItemsMap.
+aggregateByKey((0.0f, 0.0f))(
+  (inter, subTotal) => (inter._1 + subTotal, if(subTotal > inter._2) (if(inter._2 ==0) subTotal else inter._2) else subTotal ),
+  (total, inter) => (total._1+inter._1, if(total._2 > inter._2) total._2 else inter._2)
+ )
+
+
+
+-- sortByKey
+
+
+val products = sc.textFile("ashwin/data/retail_db/products/")
+
+products.take(10).foreach(println)
+
+val productsMap = products.map(product => (product.split(",")(1).toInt, product))
+
+productsMap.take(10).foreach(println)
+
+val productssortedByCategoryId = productsMap.sortByKey()
+
+productssortedByCategoryId.take(10).foreach(println)
+
+val productssortedByCategoryIdDesc = productsMap.sortByKey(false)
+
+productssortedByCategoryIdDesc.take(10).foreach(println)
+
+--order by composite keys
+
+val productsMap = products.filter(product => product.split(",")(4) != "").map(p => ((p.split(",")(1).toInt, p.split(",")(4).toFloat), p))
+
+products.count
+--1345
+
+productsMap.count
+--1344
+
+val productssortedByCategoryId = productsMap.sortByKey()
+
+
+val productsMap = products.filter(product => product.split(",")(4) != "").map(p => ((p.split(",")(1).toInt, -p.split(",")(4).toFloat), p))
+
+val productssortedByCategoryId = productsMap.sortByKey().map(rec => rec._2)
+
+productssortedByCategoryId.take(10).foreach(println)
+
+
+// Ranking - Global (Details of top 5 products)
+
+val products = sc.textFile("ashwin/data/retail_db/products/")
+
+val productsMap = products.filter(product => product.split(",")(4) != "").map(p => (p.split(",")(4).toFloat, p))
+
+val productsSortedByPrice = productsMap.sortByKey(false)
+
+productsSortedByPrice.take(10).foreach(println)
+
+--Take Ordered
+
+val products = sc.textFile("ashwin/data/retail_db/products/")
+
+products.filter(product => product.split(",")(4) != "").takeOrdered(10)(Ordering[Float].reverse.on(product => product.split(",")(4).toFloat)).foreach(println)
+
+
+// Ranking - Bi-Key ranking
+
+-- Get Top N priced products with in each product category.
+
+val products = sc.textFile("ashwin/data/retail_db/products/")
+
+val productsMap = products.filter(product => product.split(",")(4) != "").map(p => (p.split(",")(1).toInt, p))
+
+val productsGroupByCategory = productsMap.groupByKey
+
+productsGroupByCategory.take(10).foreach(println) 
+
+
+val productsIterable = productsGroupByCategory.first._2
+
+productsIterbale.size
+
+def getTopNPricedProducts(productsIterable: Iterable[String], topN: Int): Iterable[String] = {
+ val productPrices = productsIterable.map(p => p.split(",")(4).toFloat).toSet
+ val topNPrices =  productPrices.toList.sortBy(o => -o).take(topN)
+
+ val productsSorted = productsIterable.toList.sortBy(product => -product.split(",")(4).toFloat)
+ val minOfTopNPrices = topNPrices.min
+
+ val topNPricedProducts = productsSorted.takeWhile(product => product.split(",")(4).toFloat >= minOfTopNPrices)
+
+ topNPricedProducts 
+
+} 
+
+val top3PricedProducts = productsGroupByCategory.flatMap(rec => getTopNPricedProducts(rec._2,3))
+
+top3PricedProducts.collect.foreach(println)
+
+
+//Set Operations
+
+val orders = sc.textFile("ashwin/data/retail_db/orders")
+
+-- Get all the customers who placed orders in 2013 August and 2013 September.
+
+
+val customers_201308 = orders.filter(order => order.split(",")(1).contains("2013-08")).map(order => order.split(",")(2).toInt)
+
+val customers_201309 = orders.filter(order => order.split(",")(1).contains("2013-09")).map(order => order.split(",")(2).toInt)
+
+customers_201308.count
+
+customers_201309.count
+
+customers_201308.distinct.count
+
+customers_201308.distinct.count
+
+
+val customers_201308_and_201309 = customers_201308.intersection(customers_201309)
+
+customers_201308_and_201309.count
+
+--Get all unique customers who placed orders in 2013 August or 20213 September.
+
+val customers_201308_or_201309 = customers_201308.union(customers_201309)
+
+customers_201308_or_201309.count
+
+customers_201308_or_201309.distinct.count
+
+--Get all customers who placed orders in 201308 but not in 201209.
+
+
+val customers_201308_minus_201309 = customers_201308.map(c => (c,1)).leftOuterJoin(customers_201309.map(c => (c,1))).filter( rec => rec._2._2 == None).map(rec => rec._1).distinct
+
+
+// saveAsTextFile
+
+val orders = sc.textFile("ashwin/data/retail_db/orders")
+
+val countByStatus = orders.map(status => (status.split(",")(3),1)).reduceByKey((total, inter) => total + inter)
+
+countByStatus.saveAsTextfile("ashwin/data/output/order_count_by_status_snappy", class[org.apache.hadoop.io.compress.SnappyCodec])
+
+
+//with compress
+
+
+countByStatus.saveAsTextFile("ashwin/data/output/order_count_by_status_snappy1", classOf[org.apache.hadoop.io.compress.SnappyCodec])
+
+
+//Problem
+
+
+--Read products from local
+
+val products = scala.io.Source.fromFile("/home/centos/data/retail_db/products/part-00000").getLines.toList
+
+val productsRDD = sc.parallelize(products)
+
+--convert products to RDD
+
+productsRDD.take(10).foreach(println)
+
+-- Read orders and orderItems from HDFS
+
+val orders = sc.textFile("ashwin/data/retail_db/orders/")
+
+orders.take(10).foreach(println)
+
+val orderItems = sc.textFile("ashwin/data/retail_db/order_items/")
+
+orderItems.take(10).foreach(println)
+
+
+
+-- order_items layout
+
+order_item_id, order_id, product_id, quantity, sub_total, product_price.
+
+
+-- Get orders filtered by CLOSED and COMPLETE
+
+orders.map(status => (status.split(",")(3),1)).reduceByKey((total, inter) => total + inter).take(10).foreach(println)
+
+orders.filter(rec => rec.split(",")(3) == "COMPLETE" || rec.split(",")(3) == "CLOSED").take(10).foreach(println)
+
+val ordersFiltered = orders.filter(rec => rec.split(",")(3) == "COMPLETE" || rec.split(",")(3) == "CLOSED")
+
+ordersFiltered.count
+
+
+-- Create paired RDD's for ordersFiltered and orderItems
+
+val ordersPairedRDD = ordersFiltered.map(rec => (rec.split(",")(0).toInt,rec.split(",")(1)))
+
+ordersPairedRDD.take(10).foreach(println)
+
+val orderItemsPairedRDD = orderItems.map(rec => (rec.split(",")(1).toInt,(rec.split(",")(2).toInt, rec.split(",")(4).toFloat)))
+
+orderItemsPairedRDD.take(10).foreach(println)
+
+val ordersJoin = ordersPairedRDD.join(orderItemsPairedRDD)
+
+ordersJoin.take(10).foreach(println)
+
+val ordersJoinMap = ordersJoin.map(rec => ((rec._2._1 , rec._2._2._1), rec._2._2._2))
+
+ordersJoinMap.take(10).foreach(println)
+
+
+-- calculate revenue
+
+val dailyRevenuePerProductId = ordersJoinMap.reduceByKey((revenue,order_item_sub_total) => revenue + order_item_sub_total)
+
+dailyRevenuePerProductId.sortByKey().take(10).foreach(println)
+
+dailyRevenuePerProductId.count
+
+
+
+val productsPairedRDD = productsRDD.map(product => (product.split(",")(0).toInt, product.split(",")(2)))
+
+productsPairedRDD.take(10).foreach(println)
+
+productsPairedRDD.count
+
+
+
+val dailyRevenuePerProductIdMap = dailyRevenuePerProductId.map(rec => (rec._1._2.toInt, (rec._1._1 , rec._2.toFloat)))
+
+dailyRevenuePerProductIdMap.take(10).foreach(println)
+
+
+
+val dailyRevenuePerProductJoin = dailyRevenuePerProductIdMap.join(productsPairedRDD)
+
+dailyRevenuePerProductJoin.take(10).foreach(println)
+
+dailyRevenuePerProductSorted = daily
+
+val dailyRevenuePerProduct = dailyRevenuePerProductJoin.map(rec => ((rec._2._1._1,-rec._2._1._2), rec._2._1._1, rec._2._1._2,rec._2._2)).sortBy(o => o).map(rec => rec._2 + "," + rec._3 + "," + rec._4)
+
+
+dailyRevenuePerProduct.take(10).foreach(println)
+
+
+
+// Hive
+
+hive
+
+create database ashwin_retail_db_txt;
+
+use ashwin_retail_db_txt;
+
+show tables;
+
+set hive.metastore.warehouse.dir;
+
+create table orders (
+ order_id int,
+ order_date string,
+ order_customer_id int,
+ order_status string
+) row format delimited fields terminated by ','
+stored as textfile ;
+
+
+select * from orders limit 10 ;
+
+load data local inpath '/home/centos/data/retail_db/orders' overwrite into table orders;
+
+
+create table order_items (
+ order_item_id int,
+ order_item_order_id int,
+ order_item_product_id int,
+ order_item_quantity int,
+ order_item_subtal float,
+ order_item_product_price float
+) row format delimited fields terminated by ','
+stored as textfile ;
+
+load data local inpath '/home/centos/data/retail_db/order_items' overwrite into table order_items;
+
+create table customers (
+ customer_id int,
+ customer_fname varchar(45),
+ customer_lname varchar(45),
+ customer_email varchar(45),
+ customer_password varchar(45),
+ customer_street varchar(255),
+ customer_city varchar(255),
+ customer_state varchar(45),
+ customer_zipcode varchar(45)
+) row format delimited fields terminated by ','
+stored as textfile;
+
+load data local inpath '/home/centos/data/retail_db/customers' into table customers ;
+ 
+
+
+// ORC
+
+create database ashwin_retail_db_orc;
+
+use ashwin_retail_db_orc;
+
+create table orders (
+ order_id int,
+ order_date string,
+ order_customer_id int,
+ order_status string
+) 
+stored as ORC;
+
+
+create table order_items (
+ order_item_id int,
+ order_item_order_id int,
+ order_item_product_id int,
+ order_item_quantity int,
+ order_item_subtal float,
+ order_item_product_price float
+) 
+stored as ORC;
+
+
+// aggregations
+
+select 
+  a.order_id, a.order_date, 
+  b.order_item_subtal,
+  sum(b.order_item_subtal) over (partition by a.order_id) as order_revenue,
+  b.order_item_subtal/sum(b.order_item_subtal) over (partition by a.order_id) as pct_revenue,
+  rank() over (partition by a.order_id order by b.order_item_subtal desc) as rnk_order,
+  dense_rank() over (partition by a.order_id order by b.order_item_subtal desc) as dns_rnk_order
+from orders a, order_items b where a.order_id = b.order_item_order_id limit 10;
+
+select 
+  a.order_id, a.order_date, 
+  b.order_item_subtal,
+  sum(b.order_item_subtal) over (partition by a.order_id) as order_revenue,
+  b.order_item_subtal/sum(b.order_item_subtal) over (partition by a.order_id) as pct_revenue,
+  rank() over (partition by a.order_id order by b.order_item_subtal desc) as rnk_order,
+  dense_rank() over (partition by a.order_id order by b.order_item_subtal desc) as dns_rnk_order,
+  lead(b.order_item_subtal) over (partition by a.order_id order by b.order_item_subtal) as lead_order_item_subtotal,
+  lag(b.order_item_subtal) over (partition by a.order_id order by b.order_item_subtal) as lag_order_item_subtotal
+from orders a, order_items b where a.order_id = b.order_item_order_id and a.order_id = 67410;
+
+
+
+// Dataframes
+
+
+val ordersRDD = sc.textFile("ashwin/data/retail_db/orders/")
+
+ordersRDD.take(10).foreach(println)
+
+val ordersDF = ordersRDD.map(order => (order.split(",")(0).toInt, order.split(",")(1),order.split(",")(2).toInt, order.split(",")(3))).toDF
+
+-- add column names as below
+
+val ordersDF = ordersRDD.map(order => (order.split(",")(0).toInt, order.split(",")(1),order.split(",")(2).toInt, order.split(",")(3))).toDF("order_id","order_date","order_customer_id","order_status")
+
+ordersDF.show
+
+ordersDF.registerTempTable("orders")
+
+spark.sqlContext.sql("select * from orders").show()
+
+
+val productsRaw  = scala.io.Source.fromFile("/home/centos/data/retail_db/products/part-00000").getLines.toList
+
+productsRaw.take(10).foreach(println)
+
+val productsRDD = sc.parallelize(productsRaw)
+
+productsRDD.take(10).foreach(println)
+
+val productsDF = productsRDD.map(product => (product.split(",")(0).toInt, product.split(",")(2))).toDF("product_id","product_name")
+
+
+spark.sqlContext.getConf("spark.sql.shuffle.partitions")
+
+spark.sqlContext.setConf("spark.sql.shuffle.partitions","2")
+
+
+// 2.3 version
+
+val orders = spark.read.schema("""order_id INT, order_date TIMESTAMP, order_customer_id INT, order_status STRING""").
+
+val orders = spark.read.schema("""order_id INT, order_date TIMESTAMP, order_customer_id INT, order_status_test string""").option("sep", ",").format("csv").load("ashwin/data/retail_db/orders")
+
+orders.show(true)
+orders.show(truncate=false)
+orders.printSchema
+orders.describe().show
+
+val employees = List((1,"Scott","Tiger",1000.0,"united states"),
+                     (2,"Henry","Ford",1200.0,"India"),
+                     (3,"Nick","Junior",750.0,"united KINGDOM"),
+                     (4,"Bill","Tiger",1500.0,"AUSTRALIA")
+                    )
+
+val employeesDF = employees.toDF("employee_id","first_name","last_name","salary","nationality")
+
+employeesDF.show
+employeesDF.printSchema
+employeesDF.describe().show
+
+employeesDF.select("first_name","last_name")
+
+employeesDF.drop("nationality").show
+
+
+//Functions
+
+org.apache.spark.sql.functions
+
+spark.sql("show functions").show(false)
+
+spark.sql("describe function concat").show(false)
+
+
+
+employeesDF.withColumn("full_name", concat($"first_name" ,lit(", "),$"last_name")).drop("first_name","last_name").show
+
+employeesDF.selectExpr("employee_id","concat(first_name,', ',last_name) as full_name","salary","nationality").show
+
+employeesDF.write.format("csv").save("ashwin/data/outputs/employeesDF1.csv")
+
+employeesDF.write.format("parquet").option("compression","snappy").mode("overwrite").save("ashwin/data/outputs/employeesDF.parquet")
+
+
+import sys.process._
+
+"hdfs dfs -ls ashwin/data/*" !
+
+employeesDF.coalesce(1).write.format("parquet").option("compression","snappy").mode("overwrite").save("ashwin/data/outputs/")
+
+employeesDF.coalesce(1).write.format("parquet").option("compression","none").mode("overwrite").save("ashwin/data/outputs/")
+
+
+// Functions
+
+
+val l = List("X")
+
+val df = l.toDF("dummy")
+
+df.printSchema
+
+df.show
+
+
+
+val employees = List((1, "Scott", "Tiger", 1000.0, 
+                      "united states", "+1 123 456 7890", "123 45 6789"
+                     ),
+                     (2, "Henry", "Ford", 1250.0, 
+                      "India", "+91 234 567 8901", "456 78 9123"
+                     ),
+                     (3, "Nick", "Junior", 750.0, 
+                      "united KINGDOM", "+44 111 111 1111", "222 33 4444"
+                     ),
+                     (4, "Bill", "Gomes", 1500.0, 
+                      "AUSTRALIA", "+61 987 654 3210", "789 12 6118"
+                     )
+                    )
+
+
+
+val empFixedDF = employeesDF.select(
+                   lpad($"employee_id",5,"0").alias("emp_id_padded"),
+                   rpad($"first_name",10,"-").alias("first_name_padded"),
+                   rpad($"last_name",10,"-").alias("last_name_padded"),
+                   lpad($"salary",10,"-").alias("salary_padded"),
+                   rpad($"nationality",15,"-").alias("nationality_padded"),
+                   rpad($"phone_number",17,"-").alias("phone_number_padded"), 
+                   $"ssn"
+                  ).show
+
+
+
+val empFixedDF = employeesDF.select(concat(
+                   lpad($"employee_id",5,"0"),
+                   rpad($"first_name",10,"-"),
+                   rpad($"last_name",10,"-"),
+                   lpad($"salary",10,"-"),
+                   rpad($"nationality",15,"-"),
+                   rpad($"phone_number",17,"-"), 
+                   $"ssn"
+                  ).alias("employee")).show
+                   
+
+datetimesDF.select(
+                   date_add($"date",10).alias("date_added"),
+                   date_add($"time",10).alias("time_added"),
+                   date_sub(current_date,"date").alias("date_diff")
+                  ).show(false)
+
+
+
+
+git clone http://github.com/ashwinvaradharajan/data
+
+hdfs dfs -mkdir ashwin
+
+hdfs dfs -put /home/centos/data ashwin/
+
+hdfs dfs -du -s -h ashwin/data/*
+
+val airlinecsv = spark.read.format("csv").option("header","true").load("ashwin/data/")
+
+airlinecsv.write.format("parquet").option("compression","snappy").save("ashwin/data/airline_parquet")
+
+val airlines_all = spark.read.format("parquet").load("ashwin/data/airline_parquet")
+
+val airlines = airlines_all.select($"Year",$"Month",$"DayofMonth",$"DepDelay",$"ArrDelay",$"UniqueCarrier",$"FlightNum",regexp_replace(regexp_replace($"IsArrDelayed","0","NO"),"1","YES").alias("IsArrDelayed"),regexp_replace(regexp_replace($"IsDepDelayed","0","NO"),"1","YES").alias("IsDepDelayed"))
+
+airlines.filter("IsDepDelayed = 'YES' AND IsArrDelayed = 'NO'").show
+
+airlines.filter($"IsDepDelayed" === "YES" and $"IsArrDelayed" === "NO" ).count
+
+
+
+airlines.filter("IsDepDelayed= 'YES' and DepDelay > 60").count
+
+airlines.filter(col("IsDepDelayed") === "YES" and col("DepDelay") > 60 ).count
+
+
+
+airlines.filter(col("IsDepDelayed") === "NO" and col("ArrDelay") >= 15 ).count
+
+airlines.filter("IsDepDelayed = 'NO' and ArrDelay >= 15" ).count
+
+
+airlines_all.filter("Origin IN ('ORD', 'DFW' ,'ATL' ,'LAX', 'SFO')").count
+
+airlines_all.filter(col("Origin") isin ("ORD","DFW","ATL","LAX","SFO")).count
+
+
+
+airlines.withColumn("Date",concat($"Year",(lpad($"Month",2,"0")),lpad($"DayofMonth",2,"0"))).filter("Date like '2008010%'").count
+
+airlines.withColumn("Date",concat($"Year",(lpad($"Month",2,"0")),lpad($"DayofMonth",2,"0"))).filter("DayofMonth < 10").count
+
+airlines.withColumn("Date",concat($"Year",(lpad($"Month",2,"0")),lpad($"DayofMonth",2,"0"))).filter("Date between '20080101' and '20080109'").count
+
+airlines.withColumn("Date",concat($"Year",(lpad($"Month",2,"0")),lpad($"DayofMonth",2,"0"))).filter($"Date" between ("20080101","20080109")).count
+
+
+
+
+airlines.withColumn("Date",concat($"Year",(lpad($"Month",2,"0")),lpad($"DayofMonth",2,"0"))).withColumn("Dayofweek", to_date(date,"yyyyMMdd")).show
+
+
+airlines.withColumn("Date",concat($"Year",(lpad($"Month",2,"0")),lpad($"DayofMonth",2,"0"))).withColumn("Dayofweek", date_format(to_date($"Date","yyyyMMdd"),"EEEE")).filter("DayofWeek = 'Sunday'").count
+
+
+airlines.select(concat($"Year",lpad($"Month",2,"0"),lpad($"DayofMonth",2,"0")).alias("FormatteDate")).groupBy("FormatteDate").agg(count(lit(1))).sort($"FormatteDate".desc).show
+
+
+
+
+airlines.select($"Year",expr("CASE WHEN IsArrDelayed = 'YES' THEN 1 ELSE 0 END").alias("ArrDelayCount"),expr("CASE WHEN IsDepDelayed = 'YES' THEN 1 ELSE 0 END").alias("DepDelayCount"), lit("1").cast("int").alias("FlightCount")).groupBy("Year").agg(sum("FlightCount").alias("TotalFlightCount"), sum("ArrDelayCount").alias("TotalArrivalDelayedCount"),sum("DepDelayCount").alias("TotalDepDelayedCount")).show
+
+
+airlines.select(concat($"Year",lpad($"Month",2,"0"),lpad($"DayofMonth",2,"0")).alias("FormattedDate"),expr("CASE WHEN IsArrDelayed = 'YES' THEN 1 ELSE 0 END").alias("ArrDelayCount"),expr("CASE WHEN IsDepDelayed = 'YES' THEN 1 ELSE 0 END").alias("DepDelayCount"), lit("1").cast("int").alias("FlightCount")).groupBy("FormattedDate").agg(sum("FlightCount").alias("TotalFlightCount"), sum("ArrDelayCount").alias("TotalArrivalDelayedCount"),sum("DepDelayCount").alias("TotalDepDelayedCount")).show
+
+
+airlines.select(concat($"Year",lpad($"Month",2,"0"),lpad($"DayofMonth",2,"0")).alias("FormattedDate"),expr("CASE WHEN IsArrDelayed = 'YES' THEN 1 ELSE 0 END").alias("ArrDelayCount"),expr("CASE WHEN IsDepDelayed = 'YES' THEN 1 ELSE 0 END").alias("DepDelayCount"), lit("1").cast("int").alias("FlightCount")).groupBy("FormattedDate").agg(sum("FlightCount").alias("TotalFlightCount"), sum("ArrDelayCount").alias("TotalArrivalDelayedCount"),sum("DepDelayCount").alias("TotalDepDelayedCount")).sort($"FormattedDate".desc).show
+
+
