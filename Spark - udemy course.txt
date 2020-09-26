@@ -889,3 +889,41 @@ airlines.select(concat($"Year",lpad($"Month",2,"0"),lpad($"DayofMonth",2,"0")).a
 airlines.select(concat($"Year",lpad($"Month",2,"0"),lpad($"DayofMonth",2,"0")).alias("FormattedDate"),expr("CASE WHEN IsArrDelayed = 'YES' THEN 1 ELSE 0 END").alias("ArrDelayCount"),expr("CASE WHEN IsDepDelayed = 'YES' THEN 1 ELSE 0 END").alias("DepDelayCount"), lit("1").cast("int").alias("FlightCount")).groupBy("FormattedDate").agg(sum("FlightCount").alias("TotalFlightCount"), sum("ArrDelayCount").alias("TotalArrivalDelayedCount"),sum("DepDelayCount").alias("TotalDepDelayedCount")).sort($"FormattedDate".desc).show
 
 
+
+
+--test
+
+val stockTradeDataDF = spark.read.schema("stockticker string,tradedate int,openprice float,highprice float,lowprice float,closeprice float,volume int").csv("ashwin/data/nyse_all/nyse_data/")
+
+val nyseStocksRawDF = spark.read.option("sep","|").option("header",false).csv("ashwin/data/nyse_all/nyse_stocks/companylist_noheader.csv")
+
+val nyseStockDF = nyseStocksRawDF.withColumnRenamed("_c0","stock_ticker").withColumnRenamed("_c1","stockname").select("stock_ticker","stockname")
+
+
+problem 1:
+
+stockTradeDataDF.registerTempTable("stocks")
+
+stockTradeDataDF.sparkSession.sql("select count(1) from stocks").write.format("csv").option("header",false).save("ashwin/solution/spark_practice/problem1/data/nyse_count")
+
+
+problem 2:
+
+stockTradeDataDF.filter("tradedate like '2010%'").select("stockticker").distinct.sort("stockticker").coalesce(1).write.mode("overwrite").option("header", false).text("ashwin/solution/spark_practice/problem2/data/unique_stocks")
+
+problem 3:
+
+stockTradeDataDF.sort($"tradedate".asc, $"stockticker".asc).coalesce(8).write.format("json").save("ashwin/solution/spark_practice/problem3/data/nyse_data/json")
+
+problem 4:
+
+stockTradeDataDF.join(nyseStockDF, $"stockticker" === $"stock_ticker","left").filter($"stockname" isNull).select("stockticker").distinct.sort($"stockticker".asc).coalesce(1).write.option("header",false).mode("overwrite").text("ashwin/solution/spark_practice/problem4/data/no_stock_names")
+
+problem 5:
+
+stockTradeDataDF.join(nyseStockDF, $"stockticker" === $"stock_ticker","right").filter($"tradedate" isNull).select("stock_ticker").distinct.sort($"stock_ticker".asc).coalesce(1).write.option("header",false).mode("overwrite").text("ashwin/solution/spark_practice/problem5/data/untraded_stocks")
+
+
+problem 6:
+
+stockTradeDataDF.join(nyseStockDF, $"stockticker" === $"stock_ticker","left").selectExpr("stockticker","tradedate","openprice","highprice","lowprice","closeprice","volume","nvl(stockname,'Stock Name Not Available') as stockname").sort($"tradedate".asc,$"stockticker".asc).select(concat($"stockticker",lit(";"),$"tradedate",lit(";"),$"openprice",lit(";"),$"highprice",lit(";"),$"lowprice",lit(";"),$"closeprice",lit(";"),$"volume",lit(";"),$"stockname")).coalesce(1).write.option("header",false).mode("overwrite").text("ashwin/solution/spark_practice/problem6/data/stock_data_with_names")
