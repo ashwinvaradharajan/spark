@@ -1,0 +1,33 @@
+
+val df = spark.read.schema("""symboling INT, normalized-losses INT,make STRING, fuel-type STRING, aspiration STRING,num-of-doors STRING, body-style STRING,drive-wheels STRING, engine-location STRING, wheel-base DOUBLE, length DOUBLE, width DOUBLE, height DOUBLE, curb-weight INT, engine-type STRING, num-of-cylinders STRING, engine-size INT, fuel-system STRING, bore DOUBLE, stroke DOUBLE,compressionratio DOUBLE, horsepower DOUBLE, peak-rpm DOUBLE, city-mpg INT, highway-mpg INT, price DOUBLE""").option("header",false).csv("Automobile_data.csv")
+
+
+
+normalized-losses ?
+
+num-of-doors
+
+bore
+
+stroke
+
+horsepower
+
+peak-rpm
+
+
+
+price
+
+df.filter("price = '?'").select($"normalized-losses",$"num-of-doors",$"bore",$"bore",$"stroke",$"horsepower",$"peak-rpm",$"price").show
+
+
+df.filter("price = '?' or horsepower = '?' or `num-of-doors` ='?' or  `normalized-losses` = '?' or bore ='?' or stroke = '?' or `peak-rpm` = '?' ").select($"normalized-losses",$"num-of-doors",$"bore",$"stroke",$"horsepower",$"peak-rpm",$"price").show 
+
+df.filter("price != '?' and horsepower != '?' and `num-of-doors` != '?' and   `normalized-losses` != '?' and bore !='?' and stroke != '?' and `peak-rpm` != '?' ").count
+
+automobileData.select($"make",$"city-mpg").sort($"city-mpg".desc).limit(10).coalesce(1).write.mode("overwrite").option("header",true).csv("top_10_city_mpg.csv")
+
+automobileData.select($"make").distinct.coalesce(1).write.mode("overwrite").option("header",true).csv("distinct_makers.csv")
+
+
