@@ -75,64 +75,37 @@ df.select("price").filter("price is not null").agg(round(avg("price"),2).alias("
 
 df.select($"normalized_losses",$"num_of_doors",$"bore",$"stroke",$"horsepower",$"peak_rpm",$"price").show
 
-df.selectExpr(
-"symboling",
- "case when normalized_losses is null then 122 else normalized_losses end as normalized_losses",
- "make",
- "fuel_type",
- "aspiration",
- "case when num_of_doors = '?' then 'four' else num_of_doors end as num_of_doors",
- "body_style",
- "drive_wheels",
- "engine_location",
- "wheel_base",
- "length",
- "width",
- "height",
- "curb_weight",
- "engine_type",
- "num_of_cylinders",
- "engine_size",
- "fuel_system",
- "case when bore is null then 3.33 else bore end as bore",
- "case when stroke is null then 3.26 else stroke end as stroke",
- "compression_ratio",
- "case when horsepower is null then 104.0 else horsepower end as horsepower",
- "case when peak_rpm is null then 5125.0 else peak_rpm end as peak_rpm",
- "city_mpg",
- "highway_mpg",
- "case when price is null then 13207.0 else price end as price"
-).show
+cast((case when `normalized-losses` ='?' then 122 else `normalized-losses` end) as int) as normalized_losses
 
 
 val automobileDF = df.selectExpr(
-"symboling",
- "case when normalized_losses is null then 122 else normalized_losses end as normalized_losses",
+"cast(symboling as int) as symboling",
+ "cast((case when `normalized-losses` ='?' then 122 when `normalized-losses` is null then 122 else `normalized-losses` end) as int) as `normalized-losses`",
  "make",
- "fuel_type",
+ "`fuel-type`",
  "aspiration",
- "case when num_of_doors = '?' then 'four' else num_of_doors end as num_of_doors",
- "body_style",
- "drive_wheels",
- "engine_location",
- "wheel_base",
- "length",
- "width",
- "height",
- "curb_weight",
- "engine_type",
- "num_of_cylinders",
- "engine_size",
- "fuel_system",
- "case when bore is null then 3.33 else bore end as bore",
- "case when stroke is null then 3.26 else stroke end as stroke",
- "compression_ratio",
- "case when horsepower is null then 104.0 else horsepower end as horsepower",
- "case when peak_rpm is null then 5125.0 else peak_rpm end as peak_rpm",
- "city_mpg",
- "highway_mpg",
- "case when price is null then 13207.0 else price end as price"
-)
+ "cast((case when `num-of-doors` ='?' then 'four' when `num-of-doors` is null then 'four' else `num-of-doors` end) as string) as `num-of-doors`",
+  "`body-style`",
+ "`drive-wheels`",
+ "`engine-location`",
+ "cast(`wheel-base` as double) as `wheel-base`",
+ "cast(`length` as double) as `length`",
+ "cast(`width` as double) as `width`",
+ "cast(`height` as double) as `height`",
+ "cast(`curb-weight` as int) as `curb-weight`",
+ "`engine-type`",
+ "`num-of-cylinders`",
+ "cast(`engine-size` as int) as `engine-size`",
+ "`fuel-system`",
+ "cast((case when `bore` ='?' then 3.33 when `bore` is null then 3.33 else `bore` end) as double) as `bore`",
+ "cast((case when `stroke` ='?' then 3.26 when `stroke` is null then 3.26 else `stroke` end) as double) as `stroke`",
+ "cast(`compression-ratio` as double) as `compression-ratio`",
+ "cast((case when `horsepower` ='?' then 104.0 when `horsepower` is null then 104.0 else `horsepower` end) as double) as `horsepower`",
+ "cast((case when `peak-rpm` ='?' then 5125.0 when `peak-rpm` is null then 5215.0 else `peak-rpm` end) as double) as `peak-rpm`",
+ "cast(`city-mpg` as int) as `city-mpg`",
+ "cast(`highway-mpg` as int) as `highway-mpg`",
+ "cast((case when `price` ='?' then 13207.0 when `price` is null then 13207.0 else `price` end) as double) as `price`"
+ ).show
 
 
 automobileDF.coalesce(1).write.option("header",true).csv("final_data.csv")
