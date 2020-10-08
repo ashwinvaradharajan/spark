@@ -135,7 +135,7 @@ val automobileDF = df.selectExpr(
 )
 
 
-automobileDF.coealesce(1).write.option("header",true).csv("final_data.csv")
+automobileDF.coalesce(1).write.option("header",true).csv("final_data.csv")
 
 automobileDF.select($"make").distinct.coalesce(1).write.option("header",true).csv("distinct_makers.csv")
 
