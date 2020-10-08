@@ -35,7 +35,7 @@ automobileData.select($"make").distinct.coalesce(1).write.mode("overwrite").opti
 
 val df = spark.read.csv("ashwin/Data/Automobile_data.csv")
 
-val df = spark.read.schema("symboling INT, normalized_losses INT,make STRING, fuel_type STRING, aspiration STRING,num_of_doors STRING, body_style STRING,drive_wheels STRING, engine_location STRING, wheel_base DOUBLE, length DOUBLE, width DOUBLE, height DOUBLE, curb_weight INT, engine_type STRING, num_of_cylinders STRING, engine_size INT, fuel_system STRING, bore DOUBLE, stroke DOUBLE,compression_ratio DOUBLE, horsepower DOUBLE, peak_rpm DOUBLE, city_mpg INT, highway_mpg INT, price DOUBLE").option("header",true).csv("ashwin/Data/Automobile_data.csv")
+val df = spark.read.schema("symboling INT, normalized_losses INT,make STRING, fuel_type STRING, aspiration STRING,num_of_doors STRING, body_style STRING,drive_wheels STRING, engine_location STRING, wheel_base DOUBLE, length DOUBLE, width DOUBLE, height DOUBLE, curb_weight INT, engine_type STRING, num_of_cylinders STRING, engine_size INT, fuel_system STRING, bore DOUBLE, stroke DOUBLE,compression_ratio DOUBLE, horsepower DOUBLE, peak_rpm DOUBLE, city_mpg INT, highway_mpg INT, price DOUBLE").option("header",false).csv("ashwin/Data/Automobile_data.csv")
 
 
 df.filter("price = '?' or horsepower = '?' or `num_of_doors` ='?' or  `normalized_losses` = '?' or bore ='?' or stroke = '?' or `peak_rpm` = '?' ").select($"normalized_losses",$"num_of_doors",$"bore",$"stroke",$"horsepower",$"peak_rpm",$"price").show 
@@ -44,36 +44,99 @@ df.filter("price = '?' or horsepower = '?' or `num_of_doors` ='?' or  `normalize
 df.filter("price = '?' or horsepower = '?' or num_of_doors ='?' or  normalized_losses = '?' or bore ='?' or stroke = '?' or peak_rpm = '?' or price is null or horsepower is null or num_of_doors is null or  normalized_losses is null or bore is null or stroke is null or peak_rpm is null").select($"normalized_losses",$"num_of_doors",$"bore",$"stroke",$"horsepower",$"peak_rpm",$"price").show 
 
 
-df.select("normalized_losses").filter("normalized_losses is not null").agg(avg("normalized_losses").alias("mean_normalized_losses")).show
+df.select("normalized_losses").filter("normalized_losses is not null").agg(round(avg("normalized_losses"),2).alias("mean_normalized_losses")).show
 
---122
+--122.0
 
 
 df.select("num_of_doors").filter("num_of_doors is not null").groupBy($"num_of_doors").agg(count(lit(1)).alias("mode_num_of_doors")).show
 --four
 
 
-df.select("horsepower").filter("horsepower is not null").agg(avg("horsepower").alias("mean_horsepower")).show
+df.select("horsepower").filter("horsepower is not null").agg(round(avg("horsepower"),2).alias("mean_horsepower")).show
 
---104.25615763546799
+--104.26
 
-df.select("bore").filter("bore is not null").agg(avg("bore").alias("mean_bore")).show
+df.select("bore").filter("bore is not null").agg(round(avg("bore"),2).alias("mean_bore")).show
 
---3.3297512437810957
+--3.33
 
-df.select("stroke").filter("stroke is not null").agg(avg("stroke").alias("mean_stroke")).show
+df.select("stroke").filter("stroke is not null").agg(round(avg("stroke"),2).alias("mean_stroke")).show
 
---3.2554228855721337
+--3.26
 
-df.select("peak_rpm").filter("peak_rpm is not null").agg(avg("peak_rpm").alias("peak_rpm")).show
+df.select("peak_rpm").filter("peak_rpm is not null").agg(round(avg("peak_rpm"),2).alias("peak_rpm")).show
 
---5125.369458128079
+--5125.37
 
-df.select("price").filter("price is not null").agg(avg("price").alias("mean_price")).show
+df.select("price").filter("price is not null").agg(round(avg("price"),2).alias("mean_price")).show
 
---13207.129353233831
+--13207.13
 
 df.select($"normalized_losses",$"num_of_doors",$"bore",$"stroke",$"horsepower",$"peak_rpm",$"price").show
 
+df.selectExpr(
+"symboling",
+ "case when normalized_losses is null then 122 else normalized_losses end as normalized_losses",
+ "make",
+ "fuel_type",
+ "aspiration",
+ "case when num_of_doors = '?' then 'four' else num_of_doors end as num_of_doors",
+ "body_style",
+ "drive_wheels",
+ "engine_location",
+ "wheel_base",
+ "length",
+ "width",
+ "height",
+ "curb_weight",
+ "engine_type",
+ "num_of_cylinders",
+ "engine_size",
+ "fuel_system",
+ "case when bore is null then 3.33 else bore end as bore",
+ "case when stroke is null then 3.26 else stroke end as stroke",
+ "compression_ratio",
+ "case when horsepower is null then 104.0 else horsepower end as horsepower",
+ "case when peak_rpm is null then 5125.0 else peak_rpm end as peak_rpm",
+ "city_mpg",
+ "highway_mpg",
+ "case when price is null then 13207.0 else price end as price"
+).show
+
+
+val automobileDF = df.selectExpr(
+"symboling",
+ "case when normalized_losses is null then 122 else normalized_losses end as normalized_losses",
+ "make",
+ "fuel_type",
+ "aspiration",
+ "case when num_of_doors = '?' then 'four' else num_of_doors end as num_of_doors",
+ "body_style",
+ "drive_wheels",
+ "engine_location",
+ "wheel_base",
+ "length",
+ "width",
+ "height",
+ "curb_weight",
+ "engine_type",
+ "num_of_cylinders",
+ "engine_size",
+ "fuel_system",
+ "case when bore is null then 3.33 else bore end as bore",
+ "case when stroke is null then 3.26 else stroke end as stroke",
+ "compression_ratio",
+ "case when horsepower is null then 104.0 else horsepower end as horsepower",
+ "case when peak_rpm is null then 5125.0 else peak_rpm end as peak_rpm",
+ "city_mpg",
+ "highway_mpg",
+ "case when price is null then 13207.0 else price end as price"
+)
+
+
+automobileDF.coealesce(1).write.option("header",true).csv("final_data.csv")
+
+automobileDF.select($"make").distinct.coalesce(1).write.option("header",true).csv("distinct_makers.csv")
 
 
