@@ -105,11 +105,18 @@ val automobileDF = df.selectExpr(
  "cast(`city-mpg` as int) as `city-mpg`",
  "cast(`highway-mpg` as int) as `highway-mpg`",
  "cast((case when `price` ='?' then 13207.0 when `price` is null then 13207.0 else `price` end) as double) as `price`"
- ).show
+ )
 
 
 automobileDF.coalesce(1).write.option("header",true).csv("final_data.csv")
 
 automobileDF.select($"make").distinct.coalesce(1).write.option("header",true).csv("distinct_makers.csv")
 
+automobileDF.select($"make",$"city-mpg").orderBy($"city-mpg".desc).limit(10).coalesce(1).write.option("header",true).csv("top_10_city_mpg.csv")
 
+automobileDF.select($"make",(($"city-mpg"+$"highway-mpg")/2).alias("mpg")).orderBy($"mpg".desc).limit(10).coalesce(1).write.option("header",true).csv("top_10_mpg.csv")
+
+
+automobileDF.select($"make",$"price").orderBy($"price".desc).limit(10).coalesce(1).write.option("header",true).csv("top_10_price.csv")
+
+automobileDF.selectExpr("case when symboling > 0 then 'Risky' when symboling = 0 then 'Neutral' else 'Safe' end as Safety").groupBy($"Safety").agg(count(lit(1)).alias("count")).orderBy($"count").coalesce(1).write.option("header",true).csv("safety.csv")
