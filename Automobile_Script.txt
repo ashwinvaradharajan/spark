@@ -120,3 +120,13 @@ automobileDF.select($"make",(($"city-mpg"+$"highway-mpg")/2).alias("mpg")).order
 automobileDF.select($"make",$"price").orderBy($"price".desc).limit(10).coalesce(1).write.option("header",true).csv("top_10_price.csv")
 
 automobileDF.selectExpr("case when symboling > 0 then 'Risky' when symboling = 0 then 'Neutral' else 'Safe' end as Safety").groupBy($"Safety").agg(count(lit(1)).alias("count")).orderBy($"count").coalesce(1).write.option("header",true).csv("safety.csv")
+
+
+automobileDF.filter("`num-of-cylinders` = 'four'").select($"make").distinct.coalesce(1).write.option("header",true).csv("four_cylinder.csv")
+
+automobileDF.selectExpr("case when price < 10000 then 'BudgetClass' when price >= 10000 and price < 25000 then 'Mid-Class' else 'TopClass' end as title").groupBy($"title").agg(count(lit(1)).alias("count")).orderBy($"count").coalesce(1).write.option("header",true).csv("car_class.csv")
+
+automobileDF.select((($"city-mpg"+$"highway-mpg")/2).alias("mpg")).agg(round(avg($"mpg"),0).alias("avgMpg"),min($"mpg").alias("minMpg"),max($"mpg").alias("maxMpg")).coalesce(1).write.option("header",true).csv("stat.csv")
+
+automobileDF.selectExpr("case when symboling > 0 then 'Risky' when symboling = 0 then 'Neutral' else 'Safe' end as Safety","make","symboling").filter("Safety = 'Safe' and symboling = -2 ").select($"make").groupBy($"make").agg(count(lit(1)).alias("total")).coalesce(1).write.option("header",true).csv("safe_maker.csv")
+
