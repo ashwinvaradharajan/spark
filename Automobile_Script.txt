@@ -121,6 +121,11 @@ automobileDF.select($"make",$"price").orderBy($"price".desc).limit(10).coalesce(
 
 automobileDF.selectExpr("case when symboling > 0 then 'Risky' when symboling = 0 then 'Neutral' else 'Safe' end as Safety").groupBy($"Safety").agg(count(lit(1)).alias("count")).orderBy($"count").coalesce(1).write.option("header",true).csv("safety.csv")
 
+automobileDF.select((($"city-mpg" + $"highway-mpg")/2).alias("mpg"),$"curb-weight").stat.corr("mpg","curb-weight","pearson")
+
+val corelationListDF = List(-0.7835842369108661).toDF("correlation")
+
+corelationListDF.coalesce(1).write.option("header",true).csv("corr.csv")
 
 automobileDF.filter("`num-of-cylinders` = 'four'").select($"make").distinct.coalesce(1).write.option("header",true).csv("four_cylinder.csv")
 
